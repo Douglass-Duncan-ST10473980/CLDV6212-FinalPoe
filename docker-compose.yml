@@ -1,17 +1,19 @@
-# Author: Tahir Ismail
-# CoffeeNChill - Part 2 local orchestration.
-# Starts Azurite (local Azure Storage emulator) and the Azure Functions host together
-# with one command: docker-compose up
-# The Functions image is pulled from Docker Hub (not built locally), as required by the PoE.
+# Author: Tahir Ismail - ST10471483
+# CoffeeNChill - Part 3 orchestration.
+# Starts Azurite, the Azure Functions host and the ASP.NET Core API Gateway together
+# with one command: docker compose up -d
+# All application images are pulled from Docker Hub (not built locally), as required by the PoE.
+#
+# Only the API Gateway is exposed publicly (port 5000). Azurite and the Functions host are
+# bound to 127.0.0.1, so they can be reached from the machine itself (e.g. Azure Storage
+# Explorer or curl) but never from the internet. The gateway is the single front door.
 
 services:
 
-  # Azurite emulates Azure Blob, Queue and Table storage locally.
+  # Azurite emulates Azure Blob, Queue and Table storage (MenuItems, Orders, Users tables).
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite
     container_name: coffeenchill-azurite
-    # Bind to 0.0.0.0 so other containers on the network can reach Azurite,
-    # and store data in /data so it survives container restarts (see volume below).
     command: >
       azurite
       --blobHost 0.0.0.0
@@ -21,31 +23,52 @@ services:
       --loose
       --skipApiVersionCheck
     ports:
-      - "10000:10000" # Blob
-      - "10001:10001" # Queue
-      - "10002:10002" # Table
+      - "127.0.0.1:10000:10000" # Blob  (local machine only)
+      - "127.0.0.1:10001:10001" # Queue (local machine only)
+      - "127.0.0.1:10002:10002" # Table (local machine only)
     volumes:
       - azurite-data:/data
     networks:
       - coffeenchill-network
     restart: unless-stopped
 
-  # Azure Functions host running our HTTP and Queue triggered functions.
+  # Azure Functions host: menu, document, order queue and order status functions.
   functions:
-    image: tahirismail/coffeenchill-functions:v2.0
+    image: tahirismail/coffeenchill-functions:v3.0
     container_name: coffeenchill-functions
     ports:
-      - "7071:80" # Functions base image listens on port 80 inside the container
+      - "127.0.0.1:7071:80" # Local machine only - clients go through the gateway
     environment:
-      # UseDevelopmentStorage=true only works on the same machine, not between containers.
-      # This full connection string points at the "azurite" service name on the Docker network.
-      # The account key below is Azurite's public, well-known development key (not a secret).
+      # Full connection string using the "azurite" service name on the Docker network.
+      # The account key is Azurite's public, well-known development key (not a secret).
       AzureWebJobsStorage: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;"
       FUNCTIONS_WORKER_RUNTIME: "dotnet-isolated"
-      # Real Azure Storage account for the staff-docs File Share (Azurite has no File Share support).
-      # The value is read from the .env file, which is never committed to GitHub.
+      # Real Azure Storage account for the staff-docs File Share, read from .env.
       FileShareStorage: "${FileShareStorage}"
     depends_on:
+      - azurite
+    networks:
+      - coffeenchill-network
+    restart: unless-stopped
+
+  # ASP.NET Core Web API Gateway with Swagger, JWT authentication and role-based access.
+  gateway:
+    image: tahirismail/coffeenchill-gateway:v3.0
+    container_name: coffeenchill-gateway
+    ports:
+      - "5000:8080" # Public: http://<server-ip>:5000/swagger
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      # The gateway reaches the Functions host by its service name on the Docker network.
+      Functions__BaseUrl: "http://functions:80/api"
+      # Azure Table Storage (Azurite) for the Users table.
+      ConnectionStrings__AzureStorage: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;"
+      # JWT settings. The signing key is a secret, read from .env.
+      Jwt__Key: "${JWT_KEY}"
+      Jwt__Issuer: "CoffeeNChill.ApiGateway"
+      Jwt__Audience: "CoffeeNChill.Clients"
+    depends_on:
+      - functions
       - azurite
     networks:
       - coffeenchill-network
