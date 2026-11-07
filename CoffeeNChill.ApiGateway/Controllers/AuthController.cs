@@ -1,7 +1,6 @@
 using CoffeeNChill.ApiGateway.DTOs;
 using CoffeeNChill.ApiGateway.Models;
 using CoffeeNChill.ApiGateway.Services;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +9,7 @@ namespace CoffeeNChill.ApiGateway.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController: ControllerBase
+public class AuthController : ControllerBase
 {
     private readonly AuthService _authenticationService;
     private readonly IPasswordHasher<UserItem> _passwordHasher;
@@ -26,7 +25,7 @@ public class AuthController: ControllerBase
         _passwordHasher = passwordHasher;
         _logger = logger;
     }
-    
+
     [AllowAnonymous]
     [HttpPost("register")]
     [ProducesResponseType(StatusCodes.Status201Created)]
@@ -34,8 +33,7 @@ public class AuthController: ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> Register(
-        [FromBody] RegisterRequest request,
-        CancellationToken cancellationToken)
+        [FromBody] RegisterRequest request)
     {
         string[] allowedRoles =
         {
@@ -44,10 +42,9 @@ public class AuthController: ControllerBase
             "Customer"
         };
 
-        string? normalizedRole = allowedRoles.FirstOrDefault(
-            role => role.Equals(
-                request.Role.Trim(),
-                StringComparison.OrdinalIgnoreCase));
+        string? normalizedRole = allowedRoles.FirstOrDefault(role => role.Equals(
+            request.Role.Trim(),
+            StringComparison.OrdinalIgnoreCase));
 
         if (normalizedRole is null)
         {
@@ -107,5 +104,64 @@ public class AuthController: ControllerBase
         }
 
         return result;
+    }
+
+    [AllowAnonymous]
+    [HttpPost("login")]
+    [ProducesResponseType(
+        typeof(AuthResponse),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Login(
+        [FromBody] LoginRequest request)
+    {
+        try
+        {
+            UserItem? user = await _authenticationService.GetUserAsync(request.UsernameOrEmail);
+
+            // Return the same response for an unknown account and an incorrect
+            // password. This prevents attackers from discovering valid accounts.
+            if (user is null)
+            {
+                _logger.LogWarning("Failed login attempt for {Identifier}.", request.UsernameOrEmail);
+
+                return Unauthorized(new
+                {
+                    message = "Invalid username/email or password."
+                });
+            }
+
+            PasswordVerificationResult passwordResult =
+                _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+
+            if (passwordResult == PasswordVerificationResult.Failed)
+            {
+                _logger.LogWarning("Failed login attempt for user {Username}.", user.Username);
+
+                return Unauthorized(new
+                {
+                    message = "Invalid username/email or password."
+                });
+            }
+
+            AuthResponse authResponse = _authenticationService.GenerateToken(user);
+
+            _logger.LogInformation("User {Username} logged in successfully with role {Role}.", user.Username,
+                user.PartitionKey);
+
+            return Ok(authResponse);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "An unexpected error occurred during login.");
+
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new
+                {
+                    message = "An unexpected error occurred during login."
+                });
+        }
     }
 }
