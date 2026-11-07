@@ -1,9 +1,13 @@
+using System.Text;
 using CoffeeNChill.ApiGateway.Models;
 using CoffeeNChill.ApiGateway.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var config = builder.Configuration;
 // Add controller support.
 builder.Services.AddControllers();
 
@@ -24,8 +28,11 @@ builder.Services.AddSwaggerGen(options =>
 // Register the authentication storage service.
 builder.Services.AddSingleton<AuthService>(serviceProvider =>
 {
+    IConfiguration configuration =
+        serviceProvider.GetRequiredService<IConfiguration>();
+
     string connectionString =
-        builder.Configuration["Storage:ConnectionString"]
+        configuration["Storage:ConnectionString"]
         ?? throw new InvalidOperationException(
             "Storage:ConnectionString is missing.");
 
@@ -33,14 +40,34 @@ builder.Services.AddSingleton<AuthService>(serviceProvider =>
         serviceProvider.GetRequiredService<
             ILogger<AuthService>>();
 
-    return new AuthService(connectionString,
-        logger);
+    return new AuthService(
+        connectionString,
+        logger,
+        configuration);
 });
 
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(x =>
+    {
+        x.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = config["JwtSettings:Issuer"],
+            ValidAudience = config["JwtSettings:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey
+                (Encoding.UTF8.GetBytes(config["JwtSettings:Key"]!)),
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+        };
+    });
+
+builder.Services.AddAuthorization();
 // Register ASP.NET Core's secure password-hashing service.
 builder.Services.AddScoped<
     IPasswordHasher<UserItem>,
     PasswordHasher<UserItem>>();
+
 
 var app = builder.Build();
 
@@ -58,6 +85,7 @@ app.UseSwaggerUI(options =>
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
