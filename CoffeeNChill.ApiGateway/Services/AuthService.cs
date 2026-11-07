@@ -1,7 +1,12 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using Azure;
 using Azure.Data.Tables;
+using CoffeeNChill.ApiGateway.DTOs;
 using CoffeeNChill.ApiGateway.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 
 namespace CoffeeNChill.ApiGateway.Services;
 
@@ -9,10 +14,12 @@ public class AuthService
 {
     private readonly TableClient _tableClient;
     private readonly ILogger<AuthService>? _logger;
+    private readonly IConfiguration _configuration;
 
-    public AuthService(string connectionString, ILogger<AuthService>? logger)
+    public AuthService(string connectionString, ILogger<AuthService>? logger, IConfiguration configuration)
     {
         _logger = logger;
+        _configuration = configuration;
 
         try
         {
@@ -78,5 +85,82 @@ public class AuthService
 
         return null;
     }
+
+    public AuthResponse GenerateToken(UserItem user)
+    {
+        string issuer =
+            _configuration["JwtSettings:Issuer"]
+            ?? throw new InvalidOperationException(
+                "JwtSettings:Issuer is missing.");
+
+        string audience =
+            _configuration["JwtSettings:Audience"]
+            ?? throw new InvalidOperationException(
+                "JwtSettings:Audience is missing.");
+
+        string signingKey =
+            _configuration["JwtSettings:Key"]
+            ?? throw new InvalidOperationException(
+                "JwtSettings:Key is missing.");
+
+        int expiryMinutes =
+            _configuration.GetValue<int?>(
+                "JwtSettings:ExpiryMinutes") ?? 60;
+
+        DateTimeOffset expiresAt =
+            DateTimeOffset.UtcNow.AddMinutes(expiryMinutes);
+
+        var claims = new List<Claim>
+        {
+            new(
+                JwtRegisteredClaimNames.Sub,
+                user.RowKey),
+
+            new(
+                JwtRegisteredClaimNames.Jti,
+                Guid.NewGuid().ToString()),
+
+            new(
+                ClaimTypes.Name,
+                user.Username),
+
+            new(
+                ClaimTypes.Email,
+                user.RowKey),
+
+            new(
+                ClaimTypes.Role,
+                user.PartitionKey),
+
+            new(
+                "fullName",
+                $"{user.Name} {user.Surname}".Trim())
+        };
+
+        var securityKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(signingKey));
+
+        var credentials = new SigningCredentials(
+            securityKey,
+            SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            notBefore: DateTime.UtcNow,
+            expires: expiresAt.UtcDateTime,
+            signingCredentials: credentials);
+
+        string tokenValue =
+            new JwtSecurityTokenHandler().WriteToken(token);
+
+        return new AuthResponse
+        {
+            Token = tokenValue,
+            ExpiresAt = expiresAt,
+        };
+    }
+    
     
 }
