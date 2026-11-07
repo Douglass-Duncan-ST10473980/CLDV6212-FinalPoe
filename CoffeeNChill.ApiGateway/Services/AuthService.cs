@@ -1,9 +1,6 @@
-using System.Net;
 using Azure;
 using Azure.Data.Tables;
-using CoffeeNChill.ApiGateway.DTOs;
 using CoffeeNChill.ApiGateway.Models;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CoffeeNChill.ApiGateway.Services;
@@ -56,20 +53,26 @@ public class AuthService
         }
     }
 
-    public async Task<LoginResponse?> GetUserAsync(LoginRequest request)
+    public async Task<UserItem?> GetUserAsync(string usernameOrEmail)
     {
         string filter = TableClient.CreateQueryFilter(
-            $"Username eq {request.UsernameOrEmail} or Email eq {request.UsernameOrEmail}");
+            $"Username eq {usernameOrEmail} or Email eq {usernameOrEmail}");
 
         await foreach (TableEntity user in _tableClient.QueryAsync<TableEntity>(
                            filter: filter,
                            maxPerPage: 1))
         {
-            return new LoginResponse
+            return new UserItem
             {
-                Role = user.RowKey,
-                Email = user.PartitionKey,
-                Name= $"{user.GetString("Name") ?? string.Empty} {user.GetString("Surname") ?? string.Empty}"
+              PartitionKey = user.PartitionKey,
+              RowKey = user.RowKey,
+              Timestamp = user.Timestamp,
+              Name=user.GetString("Name") ?? string.Empty,
+              Surname= user.GetString("Surname") ?? string.Empty,
+              Username= user.GetString("UserName") ?? string.Empty,
+              PasswordHash= user.GetString("PasswordHash") ?? string.Empty,
+              CreatedDate = user.GetDateTime("CreatedDate") ?? DateTime.MinValue,
+              
             };
         }
 
