@@ -26,18 +26,12 @@ var builder = WebApplication.CreateBuilder(args);
 // secrets throughout the application.
 IConfiguration configuration = builder.Configuration;
 
-// -------------------------------------------------------------------------
-// CONTROLLER CONFIGURATION
-// Contributor: [GROUP MEMBER FULL NAME] — [STUDENT NUMBER]
-// -------------------------------------------------------------------------
 
 // Register support for attribute-routed ASP.NET Core API controllers.
 builder.Services.AddControllers();
 
-// -------------------------------------------------------------------------
+
 // SWAGGER / OPENAPI CONFIGURATION
-// Contributor: [GROUP MEMBER FULL NAME] — [STUDENT NUMBER]
-// -------------------------------------------------------------------------
 
 // Registers services required to discover and describe API endpoints.
 builder.Services.AddEndpointsApiExplorer();
@@ -147,15 +141,9 @@ builder.Services.AddScoped<
     IPasswordHasher<UserItem>,
     PasswordHasher<UserItem>>();
 
-// -------------------------------------------------------------------------
-// ADDITIONAL GATEWAY SERVICES
-// Contributor: [GROUP MEMBER FULL NAME] — [STUDENT NUMBER]
-// -------------------------------------------------------------------------
 
-// Add other group members' dependency-injection registrations here.
-// Example:
-// builder.Services.AddHttpClient(...);
-// builder.Services.AddSingleton<SomeGatewayService>();
+// ADDITIONAL GATEWAY SERVICES
+
 
 var app = builder.Build();
 
