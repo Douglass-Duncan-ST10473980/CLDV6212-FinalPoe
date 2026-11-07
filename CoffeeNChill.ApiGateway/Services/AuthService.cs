@@ -1,6 +1,7 @@
 using System.Net;
 using Azure;
 using Azure.Data.Tables;
+using CoffeeNChill.ApiGateway.DTOs;
 using CoffeeNChill.ApiGateway.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -53,6 +54,26 @@ public class AuthService
                 error = "A user with this email already exists."
             });
         }
+    }
+
+    public async Task<LoginResponse?> GetUserAsync(LoginRequest request)
+    {
+        string filter = TableClient.CreateQueryFilter(
+            $"Username eq {request.UsernameOrEmail} or Email eq {request.UsernameOrEmail}");
+
+        await foreach (TableEntity user in _tableClient.QueryAsync<TableEntity>(
+                           filter: filter,
+                           maxPerPage: 1))
+        {
+            return new LoginResponse
+            {
+                Role = user.RowKey,
+                Email = user.PartitionKey,
+                Name= $"{user.GetString("Name") ?? string.Empty} {user.GetString("Surname") ?? string.Empty}"
+            };
+        }
+
+        return null;
     }
     
 }
