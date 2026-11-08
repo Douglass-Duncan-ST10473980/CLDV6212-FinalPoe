@@ -4,14 +4,13 @@
 // - Douglass Duncan — ST10473980
 //   Authentication service registration, password hashing and JWT validation.
 //
-// - [GROUP MEMBER FULL NAME] — [ST10478910]
-//   [Describe contribution, for example: API Gateway and Swagger configuration.]
+// - Neha Heeralal — ST10478910
+//   API Gateway controllers, DTOs, Swagger XML documentation and global
+//   exception handling middleware.
 //
-// - [GROUP MEMBER FULL NAME] — [STUDENT NUMBER]
-//   [Describe contribution, for example: deployment and production configuration.]
-//
-// Add or update contributor details when branches are merged. Do not remove
-// another member's contribution information.
+// - Tahir Ismail — ST10471483
+//   Docker and deployment: Dockerfile, docker-compose, production configuration,
+//   Swagger registration fix and JWT Authorize button.
 
 using System.Text;
 using CoffeeNChill.ApiGateway.Models;
