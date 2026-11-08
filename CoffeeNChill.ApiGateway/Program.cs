@@ -1,39 +1,46 @@
-//done by st10478910
+// done by st10478910
 using CoffeeNChill.ApiGateway.Middleware;
+using Microsoft.OpenApi.Models;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllers();
 
-// Register the base URL for the Functions from configuration
-var functionsBaseUrl = builder.Configuration["Functions:BaseUrl"]
-    ?? "http://localhost:7071/api";  // fallback for local dev
+var functionsBaseUrl = builder.Configuration["Functions:BaseUrl"] ?? "http://localhost:7071/api";
 
-// Register a typed HttpClient for forwarding requests to Azure Functions
+// Keep the HttpClient configuration
 builder.Services.AddHttpClient("FunctionsApi", client =>
 {
     client.BaseAddress = new Uri(functionsBaseUrl.TrimEnd('/') + "/");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
-// Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+// Enable XML documentation for Swagger
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "CoffeeNChill API Gateway", Version = "v1" });
+
+    // Tell Swagger to read the XML comments (summary tags) from the code
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
+});
 
 var app = builder.Build();
 
-// Register global exception handling FIRST so it wraps all downstream middleware
+// Keep the global exception middleware first
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
-// Swagger — MUST be outside the if() block so it works in Production (Docker)
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// NOTE: UseHttpsRedirection() has been removed because the Docker
-// environment serves the gateway over plain HTTP (port 5000).
-
-app.UseAuthorization();
+// NOTE: Douglas will add app.UseAuthentication() and app.UseAuthorization() here when he merges his JWT code.
 
 app.MapControllers();
 

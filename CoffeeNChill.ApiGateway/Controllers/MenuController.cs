@@ -8,8 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace CoffeeNChill.ApiGateway.Controllers
 {
     /// <summary>
-    /// Gateway controller that forwards menu-related requests to the
-    /// Azure Functions Menu API (Role 1's /api/menu endpoints).
+    /// Gateway controller that forwards menu-related requests to the Azure Functions Menu API.
     /// </summary>
     [ApiController]
     [Route("api/menu")]
@@ -24,74 +23,65 @@ namespace CoffeeNChill.ApiGateway.Controllers
         }
 
         /// <summary>
-        /// GET /api/menu
-        /// Forwards to the Functions API and returns all menu items.
+        /// Retrieves all menu items.
         /// </summary>
+        /// <returns>A JSON array of menu items.</returns>
         [HttpGet]
         [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAllMenuItems()
         {
             var client = _httpClientFactory.CreateClient("FunctionsApi");
             var response = await client.GetAsync("menu");
             var content = await response.Content.ReadAsStringAsync();
 
-            // Preserve status code
-            return new ContentResult
-            {
-                StatusCode = (int)response.StatusCode,
-                Content = content,
-                ContentType = "application/json"
-            };
+            return new ContentResult { StatusCode = (int)response.StatusCode, Content = content, ContentType = "application/json" };
         }
 
         /// <summary>
-        /// GET /api/menu/{category}/{sku}
-        /// Forwards to the Functions API and returns a single menu item.
+        /// Retrieves a single menu item by category and SKU.
         /// </summary>
+        /// <param name="category">The category of the item.</param>
+        /// <param name="sku">The SKU of the item.</param>
         [HttpGet("{category}/{sku}")]
         [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetMenuItem(string category, string sku)
         {
             var client = _httpClientFactory.CreateClient("FunctionsApi");
-          
             var response = await client.GetAsync($"menu/item/{category}/{sku}");
             var content = await response.Content.ReadAsStringAsync();
 
-            return new ContentResult
-            {
-                StatusCode = (int)response.StatusCode,
-                Content = content,
-                ContentType = "application/json"
-            };
+            return new ContentResult { StatusCode = (int)response.StatusCode, Content = content, ContentType = "application/json" };
         }
 
         /// <summary>
-        /// GET /api/menu/category/{category}
-        /// Forwards to the Functions API and returns all items in a category.
+        /// Retrieves all menu items in a specific category.
         /// </summary>
+        /// <param name="category">The category to filter by.</param>
         [HttpGet("/api/menu/category/{category}")]
         [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMenuItemsByCategory(string category)
         {
             var client = _httpClientFactory.CreateClient("FunctionsApi");
-           
             var response = await client.GetAsync($"menu/category/{category}");
             var content = await response.Content.ReadAsStringAsync();
 
-            return new ContentResult
-            {
-                StatusCode = (int)response.StatusCode,
-                Content = content,
-                ContentType = "application/json"
-            };
+            return new ContentResult { StatusCode = (int)response.StatusCode, Content = content, ContentType = "application/json" };
         }
 
         /// <summary>
-        /// POST /api/menu
-        /// Forwards to the Functions API to create a new menu item.
+        /// Creates a new menu item. Requires Staff or Admin role.
         /// </summary>
+        /// <param name="request">The menu item data.</param>
         [HttpPost]
         [Authorize(Roles = "Admin,Staff")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> CreateMenuItem([FromBody] MenuItemRequestDto request)
         {
             var client = _httpClientFactory.CreateClient("FunctionsApi");
@@ -99,16 +89,17 @@ namespace CoffeeNChill.ApiGateway.Controllers
             var body = new StringContent(json, Encoding.UTF8, "application/json");
             var response = await client.PostAsync("menu", body);
             var content = await response.Content.ReadAsStringAsync();
-
             return new ContentResult { StatusCode = (int)response.StatusCode, Content = content, ContentType = "application/json" };
         }
 
         /// <summary>
-        /// PUT /api/menu/{category}/{sku}
-        /// Forwards to the Functions API to update an existing menu item.
+        /// Updates an existing menu item. Requires Staff or Admin role.
         /// </summary>
         [HttpPut("{category}/{sku}")]
         [Authorize(Roles = "Admin,Staff")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> UpdateMenuItem(string category, string sku, [FromBody] MenuItemRequestDto request)
         {
             var client = _httpClientFactory.CreateClient("FunctionsApi");
@@ -116,16 +107,17 @@ namespace CoffeeNChill.ApiGateway.Controllers
             var body = new StringContent(json, Encoding.UTF8, "application/json");
             var response = await client.PutAsync($"menu/{category}/{sku}", body);
             var content = await response.Content.ReadAsStringAsync();
-
             return new ContentResult { StatusCode = (int)response.StatusCode, Content = content, ContentType = "application/json" };
         }
 
         /// <summary>
-        /// DELETE /api/menu/{category}/{sku}
-        /// Forwards to the Functions API to delete a menu item.
+        /// Deletes a menu item. Requires Staff or Admin role.
         /// </summary>
         [HttpDelete("{category}/{sku}")]
         [Authorize(Roles = "Admin,Staff")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> DeleteMenuItem(string category, string sku)
         {
             var client = _httpClientFactory.CreateClient("FunctionsApi");
