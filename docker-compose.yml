@@ -62,11 +62,13 @@ services:
       # The gateway reaches the Functions host by its service name on the Docker network.
       Functions__BaseUrl: "http://functions:80/api"
       # Azure Table Storage (Azurite) for the Users table.
-      ConnectionStrings__AzureStorage: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;"
-      # JWT settings. The signing key is a secret, read from .env.
-      Jwt__Key: "${JWT_KEY}"
-      Jwt__Issuer: "CoffeeNChill.ApiGateway"
-      Jwt__Audience: "CoffeeNChill.Clients"
+      # Azure Table Storage (Azurite) for the Users table. Read as Storage:ConnectionString.
+      Storage__ConnectionString: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;"
+      # JWT settings, read as JwtSettings:*. The signing key is a secret, read from .env.
+      JwtSettings__Key: "${JWT_KEY}"
+      JwtSettings__Issuer: "CoffeeNChill.ApiGateway"
+      JwtSettings__Audience: "CoffeeNChill.Client"
+      JwtSettings__ExpiryMinutes: "60"
     depends_on:
       - functions
       - azurite
