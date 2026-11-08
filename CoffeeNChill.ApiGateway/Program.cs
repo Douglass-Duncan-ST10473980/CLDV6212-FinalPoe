@@ -1,4 +1,6 @@
 //done by st10478910
+using CoffeeNChill.ApiGateway.Middleware;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -20,6 +22,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Register global exception handling FIRST so it wraps all downstream middleware
+app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
 // Swagger — MUST be outside the if() block so it works in Production (Docker)
 app.UseSwagger();
