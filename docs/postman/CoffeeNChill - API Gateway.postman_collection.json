@@ -1,0 +1,277 @@
+{
+  "info": {
+    "_postman_id": "718cbfd0-d111-47f3-8098-09c0f4ac8ee4",
+    "name": "CoffeeNChill - API Gateway",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "57102150",
+    "_collection_link": "https://go.postman.co/collection/57102150-718cbfd0-d111-47f3-8098-09c0f4ac8ee4?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Health Check (Gateway)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Menu (Gateway)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/menu",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "menu"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Menu Item (Gateway)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/menu/Drinks/COF-001",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "menu",
+            "Drinks",
+            "COF-001"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Menu Item (Gateway)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"category\": \"Drinks\",\r\n  \"sku\": \"COF-001\",\r\n  \"name\": \"Hot Coffee\",\r\n  \"description\": \"Freshly brewed\",\r\n  \"price\": 3.5,\r\n  \"isAvailable\": true\r\n}\r\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/menu",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "menu"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Menu Item (Gateway)",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"category\": \"Drinks\",\r\n  \"sku\": \"COF-001\",\r\n  \"name\": \"Extra Hot Coffee\",\r\n  \"description\": \"Freshly brewed\",\r\n  \"price\": 4.5,\r\n  \"isAvailable\": true\r\n}\r\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/menu/Drinks/COF-001",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "menu",
+            "Drinks",
+            "COF-001"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Menu Item (Gateway)",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/menu/Drinks/COF-001",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "menu",
+            "Drinks",
+            "COF-001"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Queue Order (Gateway)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"orderId\": \"ORD-2026-8801\",\r\n  \"customerName\": \"Jane Smith\",\r\n  \"selectedItemSKUs\": [\"COF-001\", \"PAS-104\"],\r\n  \"totalPrice\": 65.00,\r\n  \"orderTimestamp\": \"2026-10-12T10:15:00Z\"\r\n}\r\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/menu/Drinks/COF-001",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "menu",
+            "Drinks",
+            "COF-001"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Orders (Gateway)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/orders",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "orders"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Order by ID (Gateway)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/orders/ORD-2026-8801",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "orders",
+            "ORD-2026-8801"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Advance Order Status (Gateway)",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"orderId\": \"ORD-2026-8801\"\r\n}\r\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/orders/status",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "orders",
+            "status"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Documents (Gateway)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/documents",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "documents"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
