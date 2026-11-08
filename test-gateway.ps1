@@ -199,3 +199,6 @@ Check "G3 DELETE /api/menu/Coffee/$sku1"       (Send-Request DELETE "/api/menu/C
 Write-Host ""
 $colour = if ($script:failed -eq 0) { "Green" } else { "Yellow" }
 Write-Host ("Done: {0} passed, {1} failed" -f $script:passed, $script:failed) -ForegroundColor $colour
+
+# A non-zero exit code makes the CI/CD pipeline fail when any test fails.
+if ($script:failed -gt 0) { exit 1 }

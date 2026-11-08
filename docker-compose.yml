@@ -34,7 +34,7 @@ services:
 
   # Azure Functions host: menu, document, order queue and order status functions.
   functions:
-    image: tahirismail/coffeenchill-functions:v3.0
+    image: tahirismail/coffeenchill-functions:${IMAGE_TAG:-v3.0}
     container_name: coffeenchill-functions
     ports:
       - "127.0.0.1:7071:80" # Local machine only - clients go through the gateway
@@ -53,7 +53,7 @@ services:
 
   # ASP.NET Core Web API Gateway with Swagger, JWT authentication and role-based access.
   gateway:
-    image: tahirismail/coffeenchill-gateway:v3.0
+    image: tahirismail/coffeenchill-gateway:${IMAGE_TAG:-v3.0}
     container_name: coffeenchill-gateway
     ports:
       - "5000:8080" # Public: http://<server-ip>:5000/swagger
