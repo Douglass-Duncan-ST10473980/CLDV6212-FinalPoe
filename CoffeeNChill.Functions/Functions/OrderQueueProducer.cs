@@ -65,11 +65,11 @@ public class OrderQueueProducer
     /// otherwise, an appropriate error response.
     /// </returns>
     [Function("OrderQueue")]
-    public async Task<HttpResponseData> QueueOrder(
+    public async Task<HttpResponseData> OrderQueue(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "post",
-            Route = "orders/queue")]
+            Route = "queue/orders")]
         HttpRequestData req,
         CancellationToken cancellationToken)
     {
