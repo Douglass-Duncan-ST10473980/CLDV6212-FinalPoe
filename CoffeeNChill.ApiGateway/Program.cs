@@ -54,16 +54,46 @@ builder.Services.AddEndpointsApiExplorer();
 // Generates the OpenAPI document displayed through Swagger UI.
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new()
+    options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "CoffeeNChill API Gateway",
         Version = "v1",
-        Description =
-            "The secured API Gateway for the CoffeeNChill canteen system."
+        Description = "The secured API Gateway for the CoffeeNChill canteen system."
     });
 
-    // TODO: Add the Swagger JWT Bearer security definition so that the
-    // Authorize button can be used to test protected endpoints.
+    // Read the XML comments (summary tags) so Swagger shows endpoint descriptions.
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
+
+    // Adds the Authorize button so a JWT can be pasted in and sent as a Bearer token.
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Paste the token from /api/auth/login (without the word Bearer)."
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 
 // -------------------------------------------------------------------------
@@ -159,28 +189,11 @@ builder.Services.AddScoped<
 
 // ADDITIONAL GATEWAY SERVICES
 
-
-// Enable XML documentation for Swagger
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "CoffeeNChill API Gateway", Version = "v1" });
-
-    // Tell Swagger to read the XML comments (summary tags) from the code
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    if (File.Exists(xmlPath))
-    {
-        options.IncludeXmlComments(xmlPath);
-    }
-});
-
 var app = builder.Build();
 
 // Keep the global exception middleware first
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
-app.UseSwagger();
-app.UseSwaggerUI();
 // -------------------------------------------------------------------------
 // HTTP REQUEST PIPELINE
 // Shared file — update contributor details above when modifying this section.
