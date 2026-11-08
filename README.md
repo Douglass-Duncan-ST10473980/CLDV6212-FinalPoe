@@ -309,7 +309,7 @@ The first pipeline run completed successfully in **3 minutes 6 seconds**, with a
 
 ### Testing
 
-`test-gateway.ps1` is an automated end-to-end test that runs the same checks we do by hand in Swagger and Postman. It creates its own users and menu items with unique names, so it can be run any number of times.
+`test-gateway.ps1` is an automated end-to-end test that runs the same checks we do by hand in Swa~~~~gger and Postman. It creates its own users and menu items with unique names, so it can be run any number of times.
 
 ```powershell
 # Local stack
