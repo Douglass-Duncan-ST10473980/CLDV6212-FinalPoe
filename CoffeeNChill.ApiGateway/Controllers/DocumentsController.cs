@@ -1,4 +1,6 @@
 ﻿// done by st10478910
+
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CoffeeNChill.ApiGateway.Controllers
@@ -12,6 +14,7 @@ namespace CoffeeNChill.ApiGateway.Controllers
     /// same content type.
     /// </summary>
     [ApiController]
+    [Authorize(Roles = "Admin,Staff")]
     [Route("api/documents")]
     public class DocumentsController : ControllerBase
     {
