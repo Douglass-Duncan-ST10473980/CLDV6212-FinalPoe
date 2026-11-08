@@ -333,6 +333,10 @@ Result against the live VPS: **39 passed, 0 failed.**
 
 ![All 39 end-to-end tests passing against the live VPS](docs/images/part3/vps-e2e-tests.png)
 
+**Postman:** `docs/postman/CoffeeNChill Part 3 - API Gateway (JWT and Roles).postman_collection.json` runs the same flows with `Bearer {{token}}` authorisation. Import it, choose **No environment**, select `docs/postman/Test Dcoument/Test File.pdf` once in *06 → Upload staff document* (then save), and choose **Run collection**. Result against the live VPS: **42 passed, 0 failed**.
+
+![Postman collection run against the live VPS](docs/images/part3/postman-run-vps.png)~~~~
+
 ### Problems Solved During Integration
 
 | Problem | Cause | Fix |
