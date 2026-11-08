@@ -1,6 +1,8 @@
-﻿// writeen by st10478910
+﻿// written by st10478910
 using System.Text;
 using System.Text.Json;
+using CoffeeNChill.ApiGateway.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CoffeeNChill.ApiGateway.Controllers
@@ -31,16 +33,17 @@ namespace CoffeeNChill.ApiGateway.Controllers
         /// the order-processing-queue for asynchronous processing.
         /// </summary>
         [HttpPost("queue")]
-        public async Task<IActionResult> QueueOrder([FromBody] JsonElement order)
+        [AllowAnonymous]
+        public async Task<IActionResult> QueueOrder([FromBody] QueueOrderRequestDto request)
         {
             var client = _httpClientFactory.CreateClient("FunctionsApi");
-            var json = JsonSerializer.Serialize(order, _jsonOptions);
+            var json = JsonSerializer.Serialize(request, _jsonOptions);
             var body = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await client.PostAsync("orders/queue", body);
             var content = await response.Content.ReadAsStringAsync();
 
-            return StatusCode((int)response.StatusCode, content);
+            return new ContentResult { StatusCode = (int)response.StatusCode, Content = content, ContentType = "application/json" };
         }
 
         /// <summary>
@@ -48,13 +51,14 @@ namespace CoffeeNChill.ApiGateway.Controllers
         /// Forwards to the Functions API and returns all orders.
         /// </summary>
         [HttpGet]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> GetAllOrders()
         {
             var client = _httpClientFactory.CreateClient("FunctionsApi");
             var response = await client.GetAsync("orders");
 
             var content = await response.Content.ReadAsStringAsync();
-            return Content(content, "application/json");
+            return new ContentResult { StatusCode = (int)response.StatusCode, Content = content, ContentType = "application/json" };
         }
 
         /// <summary>
@@ -62,13 +66,14 @@ namespace CoffeeNChill.ApiGateway.Controllers
         /// Forwards to the Functions API and returns a single order.
         /// </summary>
         [HttpGet("{orderId}")]
+        [Authorize(Roles = "Admin,Staff")]
         public async Task<IActionResult> GetOrderById(string orderId)
         {
             var client = _httpClientFactory.CreateClient("FunctionsApi");
             var response = await client.GetAsync($"orders/{orderId}");
 
             var content = await response.Content.ReadAsStringAsync();
-            return Content(content, "application/json");
+            return new ContentResult { StatusCode = (int)response.StatusCode, Content = content, ContentType = "application/json" };
         }
 
         /// <summary>
@@ -77,16 +82,17 @@ namespace CoffeeNChill.ApiGateway.Controllers
         /// through its lifecycle (Received → Preparing → Ready → Collected).
         /// </summary>
         [HttpPut("status")]
-        public async Task<IActionResult> AdvanceOrderStatus([FromBody] JsonElement body)
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> AdvanceOrderStatus([FromBody] AdvanceOrderStatusRequestDto request)
         {
             var client = _httpClientFactory.CreateClient("FunctionsApi");
-            var json = JsonSerializer.Serialize(body, _jsonOptions);
+            var json = JsonSerializer.Serialize(request, _jsonOptions);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await client.PutAsync("orders/status", content);
             var responseContent = await response.Content.ReadAsStringAsync();
 
-            return StatusCode((int)response.StatusCode, responseContent);
+            return new ContentResult { StatusCode = (int)response.StatusCode, Content = responseContent, ContentType = "application/json" };
         }
 
         /// <summary>
@@ -94,16 +100,17 @@ namespace CoffeeNChill.ApiGateway.Controllers
         /// Forwards to the Functions API to update an order to a specific status.
         /// </summary>
         [HttpPut("{orderId}/status")]
-        public async Task<IActionResult> UpdateOrderStatus(string orderId, [FromBody] JsonElement body)
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> UpdateOrderStatus(string orderId, [FromBody] UpdateOrderStatusRequestDto request)
         {
             var client = _httpClientFactory.CreateClient("FunctionsApi");
-            var json = JsonSerializer.Serialize(body, _jsonOptions);
+            var json = JsonSerializer.Serialize(request, _jsonOptions);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await client.PutAsync($"orders/{orderId}/status", content);
             var responseContent = await response.Content.ReadAsStringAsync();
 
-            return StatusCode((int)response.StatusCode, responseContent);
+            return new ContentResult { StatusCode = (int)response.StatusCode, Content = responseContent, ContentType = "application/json" };
         }
     }
 }
