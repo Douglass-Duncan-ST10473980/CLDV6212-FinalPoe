@@ -64,12 +64,12 @@ public class OrderQueueProducer
     /// A <c>202 Accepted</c> response when the order is queued successfully;
     /// otherwise, an appropriate error response.
     /// </returns>
-    [Function("QueueOrder")]
-    public async Task<HttpResponseData> QueueOrder(
+    [Function("OrderQueue")]
+    public async Task<HttpResponseData> OrderQueue(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "post",
-            Route = "orders/queue")]
+            Route = "queue/orders")]
         HttpRequestData req,
         CancellationToken cancellationToken)
     {
