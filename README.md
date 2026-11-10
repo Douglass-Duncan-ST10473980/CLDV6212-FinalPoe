@@ -2,374 +2,828 @@
 
 ## Overview
 
-This repository contains the CoffeeNChill cloud project, built in three parts for the CLDV6212 Portfolio of Evidence:
+CoffeeNChill is a cloud-based canteen management system developed for the CLDV6212 Portfolio of Evidence.
 
-- **Part 1:** Azure Functions + Azure Table Storage + Azure File Share (Menu API, Document API)
-- **Part 2:** Azure Storage Queue + Queue-Triggered Functions (Order Processing)
-- **Part 3:** ASP.NET Core API Gateway + JWT Authentication + VPS Deployment
+The project was completed in three parts:
 
-## Repository Structure
+- **Part 1:** Azure Functions, Azure Table Storage and Azure File Share
+- **Part 2:** Azure Queue Storage and queue-triggered order processing
+- **Part 3:** ASP.NET Core API Gateway, JWT authentication, role-based authorization, Docker deployment and CI/CD
 
-| Folder | Description |
-|--------|-------------|
-| `CoffeeNChill.Functions/` | Azure Functions project (Parts 1 & 2) |
-| `CoffeeNChill.ApiGateway/` | ASP.NET Core API Gateway (Part 3) |
-| `docs/postman/` | Postman collections for testing |
-| `docker-compose.yml` | Docker orchestration (Azurite + Functions + Gateway) |
+The system allows users to:
 
-## Running Locally
+- Register and log in securely
+- View and manage menu items
+- Submit orders for asynchronous processing
+- Track and update order statuses
+- Upload and retrieve staff documents
+- Access functionality according to their assigned role
 
-### Prerequisites
-- .NET 8 SDK
-- Azurite (or Docker)
-- Azure Functions Core Tools
+---
 
-### Steps
-1. Start Azurite:
-azurite
+## Contributors
 
+| Contributor | Student Number | Responsibility |
+|-------------|----------------|----------------|
+| Douglass Duncan | ST10473980 | Account registration, password hashing, JWT authentication and role-based authorization |
+| Neha Heeralal | ST10478910 | API Gateway, forwarding controllers, Swagger and exception handling |
+| Tahir Ismail | ST10471483 | Docker, Azure VPS deployment, automated testing and CI/CD |
 
-2. Start the Functions host:
-cd CoffeeNChill.Functions
-func start
-
-3. Start the API Gateway:
-cd CoffeeNChill.ApiGateway
-dotnet run
-
-
-4. Open Swagger:
-http://localhost:5000/swagger
-
-
-
-## Live Deployment (VPS)
-
-- **Live Swagger UI:** http://40.127.11.155:5000/swagger
-- **Deployment:** Docker Compose on an Azure Ubuntu VPS, redeployed automatically by GitHub Actions on every push to `main`
-- Full details: see **Part 3 — Docker, VPS Deployment & CI/CD (Role 3)** below~~~~
+---
 
 ## Video Walkthrough
 
-[YouTube link to be added once the final video is recorded]
+The following video demonstrates registration, login, JWT generation and role-based authorization:
+
+[Watch the CoffeeNChill authentication demonstration on YouTube](https://youtu.be/Su1Gke0h5xI)
 
 ---
 
-## Part 1 — Menu API & Document API
+## Repository Structure
 
-Built with Azure Functions (.NET 8 Isolated) and Azure Table Storage / File Share. See `CoffeeNChill.Functions/Functions/MenuFunctions.cs` and `DocumentFunctions.cs`.
-
-## Part 2 — Order Queue Processing
-
-Orders are placed on the `order-processing-queue`. A queue-triggered function (`ProcessOrderQueue`) reads each message, saves it to the `Orders` table with status "Received", and manages the full lifecycle: **Received → Preparing → Ready → Collected**. Poison-queue handling ensures failed messages are logged.
-
-## Part 3 — API Gateway (Role 1)
-
-**Author:** Neha Heeralal — ST10478910
-
-### What It Does
-
-The `CoffeeNChill.ApiGateway` is an ASP.NET Core Web API that sits in front of the Azure Functions and exposes a clean REST API to clients. It **forwards** every request to the appropriate backend endpoint and returns the response — so clients only need to know about the gateway, not the underlying services.
-
-### Architecture
-
-| File | Purpose |
-|------|---------|
-| `Program.cs` | Configures DI, HttpClient, Swagger, and global exception middleware |
-| `Controllers/MenuController.cs` | Forwards menu CRUD requests (GET/POST/PUT/DELETE) |
-| `Controllers/OrdersController.cs` | Forwards order queue, listing, and status endpoints |
-| `Controllers/DocumentsController.cs` | Forwards document upload, list, and download |
-| `Middleware/GlobalExceptionHandlingMiddleware.cs` | Catches all unhandled exceptions and returns clean JSON errors |
-| `DTOs/MenuItemRequestDto.cs` | Request model for creating/updating menu items |
-
-### Endpoints Exposed by the Gateway
-
-| Method | Route | Forwards To |
-|--------|-------|-------------|
-| `GET` | `/api/health` | Functions' health check |
-| `GET` | `/api/menu` | Functions' get all menu items |
-| `GET` | `/api/menu/{category}/{sku}` | Functions' get single menu item |
-| `GET` | `/api/categories/{category}` | Functions' get items by category |
-| `POST` | `/api/menu` | Functions' create menu item |
-| `PUT` | `/api/menu/{category}/{sku}` | Functions' update menu item |
-| `DELETE` | `/api/menu/{category}/{sku}` | Functions' delete menu item |
-| `POST` | `/api/orders/queue` | Functions' queue order (producer) |
-| `GET` | `/api/orders` | Functions' get all orders |
-| `GET` | `/api/orders/{orderId}` | Functions' get single order |
-| `PUT` | `/api/orders/status` | Functions' advance order status |
-| `PUT` | `/api/orders/{orderId}/status` | Functions' set specific order status |
-| `POST` | `/api/documents/upload` | Functions' upload staff document |
-| `GET` | `/api/documents` | Functions' list staff documents |
-| `GET` | `/api/documents/download/{fileName}` | Functions' download staff document |
-
-### Configuration
-
-The Gateway reads these settings from `appsettings.json` (locally) or Docker environment variables (in the container stack):
-
-| Key | Local Dev | Docker |
-|-----|-----------|--------|
-| `Functions:BaseUrl` | `http://localhost:7071/api` | `http://functions:80/api` |
-| `ConnectionStrings:AzureStorage` | `UseDevelopmentStorage=true` | Azurite connection string |
-| `Jwt:Key` / `Jwt:Issuer` / `Jwt:Audience` | Placeholders | From `.env` file |
-
-### Swagger UI
-
-The Gateway exposes interactive API documentation at:
-- **Local:** `http://localhost:5000/swagger`
-- **Docker/VPS:** `http://40.127.11.155:5000/swagger`
-
-Swagger is available in **both** Development and Production (it's registered outside the `if (app.Environment.IsDevelopment())` block).
-
-### Global Exception Handling
-
-Every unhandled exception is caught by `GlobalExceptionHandlingMiddleware`, which:
-- Logs the error with method + path
-- Returns a clean JSON response: `{ "error": "...", "path": "...", "method": "...", "traceId": "..." }`
-- Prevents raw stack traces from leaking to clients
-
-### Postman Collection
-
-A Postman collection for testing the Gateway is available at:
-`docs/postman/CoffeeNChill - API Gateway.postman_collection.json`
-
-Import it into Postman, ensure the Functions host is running (`http://localhost:7071`) and the Gateway is running (`http://localhost:5000`), then test each request.
-
-### Docker Notes
-
-The Gateway is containerized (see `CoffeeNChill.ApiGateway/Dockerfile` and `docker-compose.yml`). It runs on **port 5000** inside the Docker network. The Functions are accessible internally at `http://functions:80/api` — which is why `UseHttpsRedirection()` was removed (the Docker network uses plain HTTP).
+| Path | Description |
+|------|-------------|
+| `CoffeeNChill.Functions/` | Azure Functions project used by Parts 1 and 2 |
+| `CoffeeNChill.ApiGateway/` | ASP.NET Core API Gateway used by Part 3 |
+| `CoffeeNChill.ApiGateway/Controllers/` | Authentication and gateway controllers |
+| `CoffeeNChill.ApiGateway/Services/` | Authentication and storage services |
+| `CoffeeNChill.ApiGateway/DTOs/` | Request and response models |
+| `CoffeeNChill.ApiGateway/Models/` | Azure Table Storage entity models |
+| `docs/postman/` | Postman collections used for API testing |
+| `docs/images/` | Screenshots and supporting evidence |
+| `docker-compose.yml` | Container orchestration configuration |
+| `.env.example` | Template for required environment variables |
+| `.github/workflows/deploy.yml` | GitHub Actions CI/CD pipeline |
+| `test-gateway.ps1` | Automated end-to-end API tests |
 
 ---
-## Part 3 — Docker, VPS Deployment & CI/CD (Role 3)
 
-**Author:** Tahir Ismail — ST10471483
-
-### What This Role Delivers
-
-The whole CoffeeNChill system runs on a live Linux server in Azure, built from Docker images published on Docker Hub, and it is redeployed automatically every time code is pushed to `main`.
-
-| Deliverable | Where |
-|-------------|-------|
-| Live Swagger UI (public) | **http://40.127.11.155:5000/swagger** |
-| API Gateway image | [`tahirismail/coffeenchill-gateway`](https://hub.docker.com/r/tahirismail/coffeenchill-gateway) |
-| Azure Functions image | [`tahirismail/coffeenchill-functions`](https://hub.docker.com/r/tahirismail/coffeenchill-functions) |
-| Gateway Dockerfile | `CoffeeNChill.ApiGateway/Dockerfile` |
-| Container orchestration | `docker-compose.yml` |
-| Secrets template | `.env.example` |
-| CI/CD pipeline | `.github/workflows/deploy.yml` |
-| Automated end-to-end tests | `test-gateway.ps1` (39 checks) |
-
-### Deployment Architecture
+## System Architecture
 
 ```mermaid
 flowchart LR
-    Client["Browser / Postman"] -->|"HTTP :5000 (public)"| Gateway
+    Client["Browser, Swagger or Postman"] --> Gateway
 
-    subgraph VPS["Azure VPS: Ubuntu 24.04, Docker Engine + Compose"]
-        Gateway["API Gateway<br/>ASP.NET Core 8<br/>JWT + Swagger"]
-        Functions["Azure Functions host<br/>.NET 8 isolated"]
-        Azurite["Azurite<br/>Tables, Queues, Blobs"]
-        Gateway -->|"http://functions:80/api"| Functions
+    subgraph Server["Azure VPS / Local Docker Environment"]
+        Gateway["ASP.NET Core API Gateway"]
+        Functions["Azure Functions"]
+        Azurite["Azurite Storage Emulator"]
+
+        Gateway -->|"HTTP requests"| Functions
         Gateway -->|"Users table"| Azurite
-        Functions -->|"Menu, Orders, Queue"| Azurite
+        Functions -->|"Menu and Orders tables"| Azurite
+        Functions -->|"Order queue"| Azurite
     end
 
     Functions -->|"Staff documents"| FileShare["Azure File Share"]
 ```
 
-Only the **gateway** is reachable from the internet. Azurite and the Functions host are bound to `127.0.0.1`, so they can only be reached from the server itself. Every client request has to pass through the gateway's JWT checks, the same way every visitor to an office building has to go through reception.
+The API Gateway is the public entry point to the application. It validates JWTs, checks user roles and forwards approved requests to the appropriate Azure Function.
 
-### The Azure VPS
+---
+
+# Part 1 — Menu and Document APIs
+
+Part 1 uses .NET 8 isolated Azure Functions to expose menu-management and document-management endpoints.
+
+## Menu API
+
+Menu items are stored in Azure Table Storage.
+
+The Menu API supports:
+
+- Creating menu items
+- Retrieving all menu items
+- Retrieving one item by category and SKU
+- Filtering menu items by category
+- Updating menu items
+- Deleting menu items
+
+## Document API
+
+Staff documents are stored in an Azure File Share.
+
+The Document API supports:
+
+- Uploading documents
+- Listing stored documents
+- Downloading documents
+
+## Part 1 Storage
+
+| Storage service | Purpose |
+|-----------------|---------|
+| Azure Table Storage | Stores menu items |
+| Azure File Share | Stores staff documents |
+| Azurite | Emulates Azure storage during local development |
+
+---
+
+# Part 2 — Order Queue Processing
+
+Part 2 implements asynchronous order processing using Azure Queue Storage.
+
+When an order is submitted:
+
+1. The HTTP-triggered function validates the order.
+2. Each supplied SKU is checked against the menu.
+3. The total price is calculated using the stored menu prices.
+4. The order is added to the `order-processing-queue`.
+5. A queue-triggered function receives the message.
+6. The processed order is saved in the `Orders` table.
+
+## Order Lifecycle
+
+Orders move through the following statuses:
+
+```text
+Received → Preparing → Ready → Collected
+```
+
+Failed queue messages are retried and can be moved to a poison queue when they cannot be processed successfully.
+
+## Order Storage
+
+| Storage resource | Purpose |
+|------------------|---------|
+| `order-processing-queue` | Holds new order messages |
+| `Orders` table | Stores processed orders and their statuses |
+| Poison queue | Holds messages that repeatedly fail |
+
+---
+
+# Part 3 — API Gateway
+
+The `CoffeeNChill.ApiGateway` project is an ASP.NET Core Web API that acts as the public entry point to the system.
+
+Clients communicate with the Gateway instead of calling the Azure Functions directly.
+
+The Gateway is responsible for:
+
+- Providing a single public API
+- Registering and authenticating users
+- Generating and validating JWTs
+- Applying role-based authorization
+- Forwarding approved requests to Azure Functions
+- Providing Swagger/OpenAPI documentation
+- Handling unexpected errors consistently
+
+---
+
+## Part 3 Role 1 — Gateway and Forwarding Controllers
+
+**Author:** Neha Heeralal — ST10478910
+
+The Gateway controllers use `IHttpClientFactory` to forward requests to the Azure Functions API.
+
+### Role 1 Components
+
+| File | Purpose |
+|------|---------|
+| `Program.cs` | Registers controllers, Swagger, HttpClient and middleware |
+| `Controllers/MenuController.cs` | Forwards menu requests |
+| `Controllers/OrdersController.cs` | Forwards order requests |
+| `Controllers/DocumentsController.cs` | Forwards document requests |
+| `Middleware/GlobalExceptionHandlingMiddleware.cs` | Handles unexpected exceptions |
+| `DTOs/MenuItemRequestDto.cs` | Represents menu creation and update requests |
+
+### Gateway Endpoints
+
+| Method | Gateway route | Purpose |
+|--------|---------------|---------|
+| `POST` | `/api/auth/register` | Register an account |
+| `POST` | `/api/auth/login` | Log in and generate a JWT |
+| `GET` | `/api/health` | Check API health |
+| `GET` | `/api/menu` | Retrieve all menu items |
+| `GET` | `/api/menu/{category}/{sku}` | Retrieve one menu item |
+| `GET` | `/api/categories/{category}` | Retrieve menu items by category |
+| `POST` | `/api/menu` | Create a menu item |
+| `PUT` | `/api/menu/{category}/{sku}` | Update a menu item |
+| `DELETE` | `/api/menu/{category}/{sku}` | Delete a menu item |
+| `POST` | `/api/orders/queue` | Submit an order |
+| `GET` | `/api/orders` | Retrieve all orders |
+| `GET` | `/api/orders/{orderId}` | Retrieve one order |
+| `PUT` | `/api/orders/status` | Advance an order status |
+| `PUT` | `/api/orders/{orderId}/status` | Set a specific order status |
+| `POST` | `/api/documents/upload` | Upload a staff document |
+| `GET` | `/api/documents` | List staff documents |
+| `GET` | `/api/documents/download/{fileName}` | Download a staff document |
+
+### Global Exception Handling
+
+`GlobalExceptionHandlingMiddleware` catches unhandled exceptions and returns a consistent JSON response:
+
+```json
+{
+  "error": "An unexpected error occurred.",
+  "path": "/api/example",
+  "method": "GET",
+  "traceId": "request-trace-id"
+}
+```
+
+Raw stack traces are not returned to clients.
+
+---
+
+## Part 3 Role 2 — Authentication and Authorization
+
+**Author:** Douglass Duncan — ST10473980
+
+Role 2 provides:
+
+- Account registration
+- Registration validation
+- Secure password hashing
+- Login using a username or email address
+- JWT generation
+- JWT validation
+- Role-based authorization
+
+### Authentication Components
+
+| File | Purpose |
+|------|---------|
+| `Controllers/AuthController.cs` | Provides registration and login endpoints |
+| `Services/AuthService.cs` | Stores users, retrieves accounts and generates JWTs |
+| `Models/UserItem.cs` | Represents an account in Azure Table Storage |
+| `DTOs/RegisterRequest.cs` | Validates registration data |
+| `DTOs/LoginRequest.cs` | Validates login data |
+| `DTOs/AuthResponse.cs` | Returns a JWT and its expiration date |
+| `Program.cs` | Configures password hashing, JWT validation and authorization |
+
+### Registration
+
+Registration requires:
+
+- Name
+- Surname
+- Email address
+- Username
+- Password
+- Password confirmation
+- Role
+
+The registration DTO validates the supplied information using data annotations.
+
+Passwords must:
+
+- Contain at least eight characters
+- Contain an uppercase letter
+- Contain a lowercase letter
+- Contain a number
+- Contain a special character
+
+Passwords are hashed using ASP.NET Core's `PasswordHasher<UserItem>`. The original password is never stored.
+
+### Users Table
+
+Accounts are stored in the Azure Table Storage `Users` table.
+
+| Property | Stored value |
+|----------|--------------|
+| `PartitionKey` | Role: `Admin`, `Staff` or `Customer` |
+| `RowKey` | Normalized email address |
+| `Name` | User’s name |
+| `Surname` | User’s surname |
+| `Username` | Normalized username |
+| `PasswordHash` | Hashed password |
+| `CreatedDate` | Account creation date |
+
+### Login
+
+Users can log in using either their email address or username.
+
+The login process:
+
+1. Searches for the account using the supplied identifier.
+2. Verifies the supplied password against the stored hash.
+3. Generates a signed JWT when verification succeeds.
+4. Returns the token and its expiration date.
+
+### JWT Claims
+
+The generated JWT contains:
+
+- Subject identifier
+- Unique token identifier
+- Username
+- Email address
+- Full name
+- Role
+- Issuer
+- Audience
+- Expiration date
+
+Tokens are signed using HMAC SHA-256.
+
+### Authorization Attributes
+
+The following ASP.NET Core attributes protect the endpoints:
+
+```csharp
+[AllowAnonymous]
+```
+
+Allows access without a token. This is used for registration and login.
+
+```csharp
+[Authorize]
+```
+
+Requires a valid JWT.
+
+```csharp
+[Authorize(Roles = "Admin,Staff")]
+```
+
+Requires a valid JWT containing an approved role.
+
+### Authorization Rules
+
+| Operation | Customer | Staff | Admin |
+|-----------|----------|-------|-------|
+| Register and log in | Yes | Yes | Yes |
+| View the menu | Yes | Yes | Yes |
+| Queue an order | Yes | Yes | Yes |
+| Create menu items | No | Yes | Yes |
+| Update menu items | No | Yes | Yes |
+| Delete menu items | No | According to final policy | Yes |
+| View all orders | No | Yes | Yes |
+| Update order statuses | No | Yes | Yes |
+| Manage staff documents | No | Yes | Yes |
+
+### HTTP Authentication Responses
+
+| Status | Meaning |
+|--------|---------|
+| `200 OK` | Login or request succeeded |
+| `201 Created` | Account was registered |
+| `400 Bad Request` | Supplied information was invalid |
+| `401 Unauthorized` | No valid JWT or incorrect login credentials |
+| `403 Forbidden` | User is authenticated but does not have the required role |
+| `409 Conflict` | Account already exists |
+
+### Authentication Demonstration
+
+The authentication demonstration includes:
+
+- Registering Customer, Staff and Admin accounts
+- Confirming that passwords are hashed
+- Logging in using an email address
+- Logging in using a username
+- Generating a JWT
+- Testing without a token
+- Testing Customer authorization
+- Testing Staff authorization
+- Testing Admin authorization
+- Demonstrating `401 Unauthorized`
+- Demonstrating `403 Forbidden`
+
+[Watch the authentication and authorization demonstration](https://youtu.be/Su1Gke0h5xI)
+
+---
+
+## Part 3 Role 3 — Docker, VPS Deployment and CI/CD
+
+**Author:** Tahir Ismail — ST10471483
+
+The complete CoffeeNChill system is deployed to an Azure Ubuntu VPS using Docker Compose.
+
+### Deployment Deliverables
+
+| Deliverable | Location |
+|-------------|----------|
+| Live Swagger UI | `http://40.127.11.155:5000/swagger` |
+| API Gateway image | [tahirismail/coffeenchill-gateway](https://hub.docker.com/r/tahirismail/coffeenchill-gateway) |
+| Azure Functions image | [tahirismail/coffeenchill-functions](https://hub.docker.com/r/tahirismail/coffeenchill-functions) |
+| Gateway Dockerfile | `CoffeeNChill.ApiGateway/Dockerfile` |
+| Container orchestration | `docker-compose.yml` |
+| Environment template | `.env.example` |
+| CI/CD pipeline | `.github/workflows/deploy.yml` |
+| Automated tests | `test-gateway.ps1` |
+
+### VPS Configuration
 
 | Setting | Value |
 |---------|-------|
-| Provider | Microsoft Azure (Azure for Students) |
-| VM name / region | `coffeenchill-vps`, South Africa North |
-| Size | Standard B2als_v2 (2 vCPU, 4 GB RAM, x64) |
+| Provider | Microsoft Azure |
+| Region | South Africa North |
 | Operating system | Ubuntu Server 24.04 LTS |
-| Public IP | `40.127.11.155` |
-| Software | Docker Engine 29, Docker Compose v5 |
-| Inbound ports | 22 (SSH, for administration and deployments), 5000 (API Gateway) |
-| Cost control | Auto-shutdown at 23:00 SAST; the VM is stopped when not in use |
+| Public port | `5000` |
+| SSH port | `22` |
+| Container platform | Docker Engine and Docker Compose |
 
-The network security group only allows SSH (22) and the gateway port (5000). Everything else is blocked by Azure's default `DenyAllInBound` rule.
+Only the API Gateway is publicly accessible. The Azure Functions and Azurite services remain inside the private Docker network.
 
-![Azure network security group inbound rules](docs/images/part3/azure-nsg-inbound-rules.png)
+### Docker Services
 
-### Docker Images
+| Service | Purpose |
+|---------|---------|
+| `gateway` | Public API Gateway, Swagger and JWT authorization |
+| `functions` | Azure Functions backend |
+| `azurite` | Local Table, Queue and Blob storage |
 
-Both application images are built with **multi-stage Dockerfiles**: the full .NET 8 SDK compiles and publishes the code, and only the published output is copied into a small runtime image. The final images contain no source code or build tools.
+Azurite uses a named volume so that users, menu items and orders survive container restarts.
 
-The gateway Dockerfile also:
-- runs the app as the built-in **non-root `app` user**, so a compromised container has fewer permissions
-- listens on port **8080** (`ASPNETCORE_HTTP_PORTS=8080`), which Compose maps to port 5000
-- restores NuGet packages in a separate layer, so rebuilding after a code change is fast
+### CI/CD Pipeline
 
-Images are **version-tagged** on Docker Hub:
+The GitHub Actions workflow runs when changes are pushed to `main`.
 
-| Tag | Meaning |
-|-----|---------|
-| `v3.0` | First Part 3 release (built and pushed manually) |
-| `v3.<run number>` (e.g. `v3.1`) | Built and pushed automatically by each CI/CD run |
+The pipeline:
 
-### docker-compose.yml
+1. Restores and builds the .NET solution.
+2. Runs automated tests.
+3. Builds the Docker images.
+4. Publishes the images to Docker Hub.
+5. Connects to the VPS using SSH.
+6. Pulls the new images.
+7. Restarts the Docker Compose stack.
+8. Runs end-to-end tests against the deployment.
 
-One command starts all three services on a private Docker network (`coffeenchill-network`):
+A failed build or failed test prevents an unsuccessful version from being deployed.
 
-| Service | Image | Ports | Purpose |
-|---------|-------|-------|---------|
-| `azurite` | `mcr.microsoft.com/azure-storage/azurite` | `127.0.0.1:10000-10002` (local only) | Table, Queue and Blob storage |
-| `functions` | `tahirismail/coffeenchill-functions:${IMAGE_TAG:-v3.0}` | `127.0.0.1:7071` (local only) | Menu, documents, order queue and status functions |
-| `gateway` | `tahirismail/coffeenchill-gateway:${IMAGE_TAG:-v3.0}` | `5000` (public) | Swagger, JWT authentication, role checks, request forwarding |
+---
 
-Key design points:
-- **Images are pulled from Docker Hub**, not built on the server.
-- Containers find each other by **service name** (`http://functions:80/api`, `http://azurite:10002`), because `localhost` inside a container means the container itself.
-- Azurite stores its data in the named volume **`azurite-data`**, so users, menu items and orders survive restarts.
-- `restart: unless-stopped` brings the stack back automatically after the VM reboots.
-- `IMAGE_TAG` selects which image version runs. It defaults to `v3.0`, and the pipeline sets it on every deployment.
+# Configuration
 
-### Production Configuration and Secrets
+## Local configuration
 
-ASP.NET Core reads environment variables in place of `appsettings.json` values. A double underscore (`__`) stands for the `:` in a setting name:
+The API Gateway uses the following settings:
 
-| Environment variable (compose) | Setting read by the gateway | Value |
-|--------------------------------|-----------------------------|-------|
-| `ASPNETCORE_ENVIRONMENT` | — | `Production` |
-| `Functions__BaseUrl` | `Functions:BaseUrl` | `http://functions:80/api` |
-| `Storage__ConnectionString` | `Storage:ConnectionString` | Azurite connection string (via the `azurite` service name) |
-| `JwtSettings__Key` | `JwtSettings:Key` | **Secret**, from `.env` (`JWT_KEY`) |
-| `JwtSettings__Issuer` | `JwtSettings:Issuer` | `CoffeeNChill.ApiGateway` |
-| `JwtSettings__Audience` | `JwtSettings:Audience` | `CoffeeNChill.Client` |
-| `JwtSettings__ExpiryMinutes` | `JwtSettings:ExpiryMinutes` | `60` |
-
-Secrets never go into the repository:
-- The real values live in a **`.env`** file next to `docker-compose.yml`. It is listed in `.gitignore` and on the VPS it is readable only by its owner (`chmod 600`).
-- **`.env.example`** shows which values are needed, without the values themselves.
-- The VPS has its **own JWT signing key**, generated with `openssl rand -base64 48`, different from the keys used on developer laptops.
-- The CI/CD pipeline's credentials are stored as encrypted **GitHub Actions secrets**.
-
-`.env` format:
-```
-FileShareStorage=<Azure Storage connection string for the staff-docs File Share>
-JWT_KEY=<long random value, at least 32 characters>
-IMAGE_TAG=v3.1   # optional; written by the pipeline
+```json
+{
+  "Functions": {
+    "BaseUrl": "http://localhost:7071/api"
+  },
+  "Storage": {
+    "ConnectionString": "UseDevelopmentStorage=true"
+  },
+  "JwtSettings": {
+    "Issuer": "CoffeeNChill.ApiGateway",
+    "Audience": "CoffeeNChill.Client",
+    "Key": "LOCAL-DEVELOPMENT-KEY-AT-LEAST-32-CHARACTERS",
+    "ExpiryMinutes": 60
+  }
+}
 ```
 
-### Running the Stack with Docker (local or VPS)
+Do not commit real production keys or connection strings.
 
-Prerequisites: Docker Desktop (Windows/macOS) or Docker Engine + Compose (Linux).
+## Docker environment variables
+
+ASP.NET Core uses double underscores to represent nested configuration sections.
+
+| Environment variable | Application setting |
+|----------------------|---------------------|
+| `Functions__BaseUrl` | `Functions:BaseUrl` |
+| `Storage__ConnectionString` | `Storage:ConnectionString` |
+| `JwtSettings__Key` | `JwtSettings:Key` |
+| `JwtSettings__Issuer` | `JwtSettings:Issuer` |
+| `JwtSettings__Audience` | `JwtSettings:Audience` |
+| `JwtSettings__ExpiryMinutes` | `JwtSettings:ExpiryMinutes` |
+
+Production secrets are stored in a `.env` file that is excluded from Git.
+
+Example:
+
+```text
+FileShareStorage=<Azure File Share connection string>
+JWT_KEY=<secure random JWT signing key>
+IMAGE_TAG=v3.1
+```
+
+---
+
+# Running the Project Locally
+
+## Prerequisites
+
+Install:
+
+- Git
+- .NET 8 SDK
+- Azure Functions Core Tools
+- Azurite or Docker Desktop
+- JetBrains Rider, Visual Studio or Visual Studio Code
+- Postman Desktop
+
+## Clone the repository
 
 ```bash
 git clone https://github.com/Douglass-Duncan-ST10473980/CLDV6212-FinalPoe.git
 cd CLDV6212-FinalPoe
-cp .env.example .env          # then fill in FileShareStorage and JWT_KEY
-docker compose pull
-docker compose up -d
-docker compose ps             # azurite, functions and gateway should all be "Up"
 ```
 
-Then open `http://localhost:5000/swagger` (local) or `http://<server-ip>:5000/swagger` (VPS).
+## Option 1 — Run without Docker Compose
 
-### First-Time VPS Setup (summary)
-
-1. Created the Ubuntu 24.04 VM in Azure (South Africa North) with SSH-key login and an inbound rule for TCP 5000.
-2. Installed Docker Engine and Compose with Docker's official script (`curl -fsSL https://get.docker.com | sh`) and added `azureuser` to the `docker` group.
-3. Cloned the repository to `~/CLDV6212-FinalPoe` and created `.env` with `chmod 600`.
-4. Ran `docker compose pull && docker compose up -d`.
-5. Checked public access from another network: `Test-NetConnection 40.127.11.155 -Port 5000` returned `TcpTestSucceeded : True`, and Swagger loads in the browser.
-
-![Swagger UI served from the live VPS](docs/images/part3/vps-swagger-public.png)
-
-### CI/CD Pipeline (GitHub Actions) — Bonus
-
-`.github/workflows/deploy.yml` runs on every push to `main` (and can be started manually from the **Actions** tab). Changes that only touch Markdown files or `docs/` do not trigger a deployment.
-
-| Stage | What it does |
-|-------|--------------|
-| 1. **Build and test (.NET 8)** | Checks out the code, installs .NET 8, restores, builds the solution in Release mode and runs `dotnet test` |
-| 2. **Build and push Docker images** | Builds both images for `linux/amd64` and pushes them to Docker Hub as `v3.<run number>` and `v3.0` |
-| 3. **Deploy to the Azure VPS** | Connects over SSH, runs `git pull`, writes the new `IMAGE_TAG` into `.env`, then `docker compose pull` and `docker compose up -d`, and waits until the gateway answers |
-| 4. **End-to-end tests on the live VPS** | Runs `test-gateway.ps1` against `http://<VPS>:5000`. Any failed check fails the pipeline |
-
-Each stage only starts if the previous one succeeded, so a build error never reaches the live server. A `concurrency` group makes sure two deployments never run at the same time.
-
-**Repository secrets used by the pipeline:**
-
-| Secret | Purpose |
-|--------|---------|
-| `DOCKERHUB_USERNAME` | Docker Hub account that owns the images |
-| `DOCKERHUB_TOKEN` | Docker Hub access token (Read & Write), used instead of the account password |
-| `VPS_HOST` | Public IP of the VPS |
-| `VPS_USER` | SSH user on the VPS |
-| `VPS_SSH_KEY` | Private half of a **dedicated deploy key** used only by GitHub Actions. It can be revoked on its own by removing its line from `~/.ssh/authorized_keys`, without affecting the administrator's key |
-
-The first pipeline run completed successfully in **3 minutes 6 seconds**, with all four stages green:
-
-![GitHub Actions pipeline run with all four stages successful](docs/images/part3/cicd-pipeline-success.png)
-
-### Testing
-
-`test-gateway.ps1` is an automated end-to-end test that runs the same checks we do by hand in Swagger and Postman. It creates its own users and menu items with unique names, so it can be run any number of times.
-
-```powershell
-# Local stack
-powershell -ExecutionPolicy Bypass -File .\test-gateway.ps1
-
-# Live VPS
-powershell -ExecutionPolicy Bypass -File .\test-gateway.ps1 -BaseUrl http://40.127.11.155:5000
-```
-
-| Section | What is checked | Expected codes |
-|---------|-----------------|----------------|
-| A. No token | Public menu works; protected endpoints are refused | 200, 401 |
-| B. Register and log in | Staff and Customer registration, duplicate account, weak password, wrong password, login tokens | 201, 409, 400, 401, 200 |
-| C. Customer token | Customer can read the menu but cannot manage the menu, orders or documents | 200, 403 |
-| D. Staff token | Create, read, update menu items; invalid SKU rejected | 201, 200, 400 |
-| E. Orders | Queue an order, wait for the queue trigger, read it, move it Received → Preparing → Ready → Collected, reject a further step and an unknown SKU | 202, 200, 400, 403 |
-| F. Documents | Upload, list and download a staff PDF | 201, 200 |
-| G. Clean-up | Delete the test menu items | 204, 404 |
-
-Result against the live VPS: **39 passed, 0 failed.**
-
-![All 39 end-to-end tests passing against the live VPS](docs/images/part3/vps-e2e-tests.png)
-
-**Postman:** `docs/postman/CoffeeNChill Part 3 - API Gateway (JWT and Roles).postman_collection.json` runs the same flows with `Bearer {{token}}` authorisation. Import it, choose **No environment**, select `docs/postman/Test Dcoument/Test File.pdf` once in *06 → Upload staff document* (then save), and choose **Run collection**. Result against the live VPS: **42 passed, 0 failed**.
-
-![Postman collection run against the live VPS](docs/images/part3/postman-run-vps.png)~~~~
-
-### Problems Solved During Integration
-
-| Problem | Cause | Fix |
-|---------|-------|-----|
-| Gateway would stop at start-up in Docker ("JwtSettings:Issuer is missing") | The JWT and storage settings only existed in `appsettings.Development.json`, and Docker runs in Production | Supplied them as environment variables with the exact names the code reads (`JwtSettings__*`, `Storage__ConnectionString`) |
-| Every request returned `"An unexpected error occurred."` | `AddSwaggerGen` was registered twice, both with a document called `v1`, after two branches were merged | Merged them into one registration, and added the Bearer security definition so Swagger shows the **Authorize** button |
-| Endpoint descriptions were missing from Swagger | The project did not generate its XML documentation file | Enabled `GenerateDocumentationFile` in the gateway `.csproj` |
-| Swagger reachable on the VPS itself but "not working" on a phone | The address was typed into a Google search box instead of the browser address bar | Confirmed the port was open with `Test-NetConnection`, then opened `http://40.127.11.155:5000/swagger` directly |
-
-### Useful Commands on the VPS
+Start Azurite:
 
 ```bash
-cd ~/CLDV6212-FinalPoe
-docker compose ps                    # are all three containers up?
-docker compose logs gateway --tail 50
-docker compose pull && docker compose up -d   # manual redeploy
-curl -s http://localhost:5000/swagger/v1/swagger.json -o /dev/null -w "%{http_code}\n"
+azurite
 ```
 
-### Role 3 Commit History (Tahir Ismail)
+Start the Azure Functions project:
 
-| Commit | Description |
-|--------|-------------|
-| `524bbed` | Add multi-stage Dockerfile for the API Gateway |
-| `153c184` | Add API Gateway service to docker-compose and restrict internal ports |
-| `c5f669d` | Add .env.example listing required gateway and storage secrets |
-| `e2353fe` | Match gateway environment variables to JwtSettings and Storage config |
-| `89fe623` | Fix duplicate Swagger registration and add JWT Authorize button |
-| `2b12cd3` | Generate XML documentation file so Swagger shows endpoint comments |
-| `4505ce8` | Add automated end-to-end test script for the API Gateway |
-| `346c905` | Add automated end-to-end test script and finalise contributor details |
-| `e3ba481` | Make image version configurable with IMAGE_TAG for CI/CD deployments |
-| `14a14fa` | Return a failing exit code when any end-to-end test fails |
-| `a7da4e7` | Add GitHub Actions CI/CD pipeline to build, publish and deploy to the VPS |
+```bash
+cd CoffeeNChill.Functions
+func start
+```
 
-Merged through pull requests **#1** (`feature-vps-deployment`) and **#2** (`feature-cicd-pipeline`).~~~~
+In a second terminal, start the Gateway:
+
+```bash
+cd CoffeeNChill.ApiGateway
+dotnet run
+```
+
+Open Swagger:
+
+```text
+http://localhost:5000/swagger
+```
+
+## Option 2 — Run using Docker Compose
+
+Create the local environment file:
+
+```bash
+cp .env.example .env
+```
+
+Add the required values to `.env`, then run:
+
+```bash
+docker compose pull
+docker compose up -d
+docker compose ps
+```
+
+Open Swagger:
+
+```text
+http://localhost:5000/swagger
+```
+
+Stop the containers with:
+
+```bash
+docker compose down
+```
+
+---
+
+# Testing Authentication in Swagger
+
+## Register a Customer
+
+```json
+{
+  "name": "Cameron",
+  "surname": "Customer",
+  "email": "customer@coffeenchill.test",
+  "username": "customer.demo",
+  "password": "Customer@123",
+  "confirmPassword": "Customer@123",
+  "role": "Customer"
+}
+```
+
+## Register a Staff User
+
+```json
+{
+  "name": "Stella",
+  "surname": "Staff",
+  "email": "staff@coffeenchill.test",
+  "username": "staff.demo",
+  "password": "StaffDemo@123",
+  "confirmPassword": "StaffDemo@123",
+  "role": "Staff"
+}
+```
+
+## Register an Administrator
+
+```json
+{
+  "name": "Adam",
+  "surname": "Administrator",
+  "email": "admin@coffeenchill.test",
+  "username": "admin.demo",
+  "password": "AdminDemo@123",
+  "confirmPassword": "AdminDemo@123",
+  "role": "Admin"
+}
+```
+
+## Log in
+
+```json
+{
+  "usernameOrEmail": "customer@coffeenchill.test",
+  "password": "Customer@123"
+}
+```
+
+Copy the token returned by the API.
+
+Select **Authorize** in Swagger and enter:
+
+```text
+Bearer <your-token>
+```
+
+After authorization, test the endpoints permitted for that user’s role.
+
+---
+
+# Automated Testing
+
+Run the PowerShell end-to-end tests locally:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\test-gateway.ps1
+```
+
+Run them against the VPS:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\test-gateway.ps1 `
+  -BaseUrl http://40.127.11.155:5000
+```
+
+The automated suite tests:
+
+- Requests without tokens
+- Registration validation
+- Duplicate accounts
+- Correct and incorrect passwords
+- Customer authorization
+- Staff authorization
+- Menu management
+- Order processing
+- Document management
+- Test-data cleanup
+
+The recorded live result was:
+
+```text
+39 passed, 0 failed
+```
+
+---
+
+# Postman Testing
+
+Import:
+
+```text
+docs/postman/CoffeeNChill Part 3 - API Gateway (JWT and Roles).postman_collection.json
+```
+
+The collection tests:
+
+- Registration
+- Login
+- JWT authorization
+- Menu endpoints
+- Order endpoints
+- Document endpoints
+- Invalid requests
+- Unauthorized requests
+- Forbidden requests
+
+For document upload testing, select the supplied test PDF in the Postman request before running the collection.
+
+---
+
+# Swagger
+
+Swagger is available at:
+
+- **Local:** `http://localhost:5000/swagger`
+- **VPS:** `http://40.127.11.155:5000/swagger`
+
+Swagger remains enabled in production so the deployed API can be demonstrated and assessed.
+
+---
+
+# Security
+
+The project includes the following security measures:
+
+- Password hashing
+- JWT signature validation
+- JWT issuer validation
+- JWT audience validation
+- JWT expiration validation
+- Role-based authorization
+- Non-root Docker containers
+- Private Docker networking
+- Environment-based production secrets
+- Restricted VPS inbound ports
+- Global exception handling
+- No raw stack traces returned to clients
+
+Production secrets must never be committed to the repository.
+
+The following files should remain excluded through `.gitignore`:
+
+```text
+.env
+appsettings.Production.json
+*.user
+```
+
+---
+
+# Common Response Codes
+
+| Code | Meaning |
+|------|---------|
+| `200 OK` | Request completed successfully |
+| `201 Created` | Resource was created |
+| `202 Accepted` | Order was accepted for queue processing |
+| `204 No Content` | Resource was deleted successfully |
+| `400 Bad Request` | Validation or request data was invalid |
+| `401 Unauthorized` | Authentication failed or no valid token was supplied |
+| `403 Forbidden` | Authenticated user lacks the required role |
+| `404 Not Found` | Requested resource does not exist |
+| `409 Conflict` | Account or resource already exists |
+| `500 Internal Server Error` | Unexpected server error |
+
+---
+
+# Useful VPS Commands
+
+Check the containers:
+
+```bash
+docker compose ps
+```
+
+View Gateway logs:
+
+```bash
+docker compose logs gateway --tail 50
+```
+
+View Functions logs:
+
+```bash
+docker compose logs functions --tail 50
+```
+
+Pull and restart the deployment:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Test whether Swagger is responding:
+
+```bash
+curl -s http://localhost:5000/swagger/v1/swagger.json \
+  -o /dev/null \
+  -w "%{http_code}\n"
+```
+
+---
+
+# Troubleshooting
+
+| Problem | Possible solution |
+|---------|-------------------|
+| `JwtSettings:Issuer is missing` | Check the `JwtSettings` section or Docker environment variables |
+| `Storage:ConnectionString is missing` | Add the storage connection string to the configuration |
+| `TableNotFound` | Confirm that Azurite is running and ensure the table is created before access |
+| `401 Unauthorized` | Log in again and supply a valid, unexpired JWT |
+| `403 Forbidden` | Use an account containing the required role |
+| Swagger does not show Authorize | Confirm that the Bearer security definition is registered |
+| Functions cannot be reached | Check `Functions:BaseUrl` and confirm the Functions host is running |
+| Invalid JWT signature | Ensure token generation and validation use the same JWT key |
+| Containers cannot communicate | Use Docker service names instead of `localhost` |
+
+---
+
+# Final Result
+
+The completed CoffeeNChill system demonstrates:
+
+- Serverless Azure Functions
+- Azure Table Storage
+- Azure Queue Storage
+- Azure File Share
+- Asynchronous order processing
+- ASP.NET Core API Gateway development
+- Secure password hashing
+- JWT authentication
+- Role-based authorization
+- Swagger and Postman testing
+- Docker containerization
+- Azure VPS deployment
+- Automated CI/CD
+
+The Gateway provides one secured public entry point while the Azure Functions and storage services remain behind the application boundary.
