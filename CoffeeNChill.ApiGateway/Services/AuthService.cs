@@ -99,13 +99,13 @@ public class AuthService
     /// An HTTP 201 response when the account is created, or an HTTP 409
     /// response when an entity with the same partition and row keys exists.
     /// </returns>
-    public async Task<IActionResult> CreateUserAsync(
-        UserItem user)
+    public async Task<IActionResult> CreateUserAsync(UserItem user)
     {
         ArgumentNullException.ThrowIfNull(user);
 
         try
         {
+            await EnsureTableExistsAsync();
             await _tableClient.AddEntityAsync(user);
 
             _logger.LogInformation(
@@ -122,19 +122,25 @@ public class AuthService
             };
         }
         catch (RequestFailedException exception)
-            when (exception.Status ==
-                  StatusCodes.Status409Conflict)
+            when (exception.Status == StatusCodes.Status409Conflict)
         {
             _logger.LogWarning(
-                exception,
-                "A user with email {Email} and role {Role} already exists.",
-                user.RowKey,
-                user.PartitionKey);
+                "A user with email {Email} already exists.",
+                user.RowKey);
 
             return new ConflictObjectResult(new
             {
                 error = "A user with this email already exists."
             });
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Failed to create user {Email}.",
+                user.RowKey);
+
+            throw;
         }
     }
 
@@ -271,5 +277,14 @@ public class AuthService
             Token = tokenValue,
             ExpiresAt = expiresAt
         };
+    }
+    
+    private async Task EnsureTableExistsAsync()
+    {
+        await _tableClient.CreateIfNotExistsAsync();
+
+        _logger.LogDebug(
+            "Confirmed that the {TableName} table exists.",
+            TableName);
     }
 }

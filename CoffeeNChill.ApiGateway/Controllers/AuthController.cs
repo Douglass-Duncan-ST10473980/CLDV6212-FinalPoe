@@ -188,9 +188,7 @@ public class AuthController : ControllerBase
     /// </response>
     [AllowAnonymous]
     [HttpPost("login")]
-    [ProducesResponseType(
-        typeof(AuthResponse),
-        StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Login(
